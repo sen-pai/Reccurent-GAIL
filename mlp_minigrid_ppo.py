@@ -18,7 +18,10 @@ from pfrl.policies import SoftmaxCategoricalHead
 
 logging.basicConfig(level=20)
 
-cenv = gym.make("MiniGrid-Empty-6x6-v0")
+
+env_name = "MiniGrid-Empty-5x5-v0"
+
+cenv = gym.make(env_name)
 cenv = wrappers.FlatObsWrapper(cenv)
 
 
@@ -29,7 +32,7 @@ def make_env(idx, test):
     # Use different random seeds for train and test envs
     process_seed = 1
     env_seed = 1
-    env = gym.make("MiniGrid-LavaCrossingS9N1-v0")
+    env = gym.make(env_name)
     env = wrappers.FlatObsWrapper(env)
     print('env made')
     env.seed(env_seed)
@@ -37,7 +40,7 @@ def make_env(idx, test):
         env = pfrl.wrappers.Monitor(
             env, 'mlp_run', mode="evaluation" if test else "training"
         )
-    if False:
+    if True:
         env = pfrl.wrappers.Render(env)
     return env
 
@@ -45,7 +48,7 @@ def make_batch_env(test):
     vec_env = pfrl.envs.MultiprocessVectorEnv(
         [
             (lambda: make_env(idx, test))
-            for idx, env in enumerate(range(2))
+            for idx, env in enumerate(range(1))
         ]
     )
 
@@ -54,13 +57,13 @@ def make_batch_env(test):
 
 
 model = nn.Sequential(
-    nn.Linear(obs_size, 512),
+    nn.Linear(obs_size, 64),
     nn.ReLU(),
     pfrl.nn.Branched(
         # action branch
-        nn.Sequential(nn.Linear(512, n_actions), SoftmaxCategoricalHead(),),
+        nn.Sequential(nn.Linear(64, n_actions), SoftmaxCategoricalHead(),),
         # value branch
-        nn.Linear(512, 1),
+        nn.Linear(64, 1),
     ),
 )
 
@@ -86,7 +89,7 @@ model = nn.Sequential(
 #     )
 
 
-opt = torch.optim.Adam(model.parameters(), lr=1e-3, eps=1e-5)
+opt = torch.optim.Adam(model.parameters(), lr=3e-4)
 
 
 # mostly not needed
@@ -99,7 +102,7 @@ agent = PPO(
     model,
     opt,
     gpu=0,
-    phi=phi,
+    # phi=phi,
     # update_interval=,
     minibatch_size=64,
     epochs=10,
@@ -115,7 +118,7 @@ if __name__ == '__main__':
     pfrl.experiments.train_agent_batch(
         agent,
         env= make_batch_env(False),
-        steps = 10000,
+        steps = 50000,
         outdir = 'mlp_run',
         checkpoint_freq=None,
         log_interval=10,
