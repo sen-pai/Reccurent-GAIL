@@ -30,8 +30,7 @@ n_actions = cenv.action_space.n
 
 def make_env(idx, test):
     # Use different random seeds for train and test envs
-    process_seed = 1
-    env_seed = 1
+    env_seed = idx
     env = gym.make(env_name)
     env = wrappers.FlatObsWrapper(env)
     print('env made')
@@ -48,7 +47,7 @@ def make_batch_env(test):
     vec_env = pfrl.envs.MultiprocessVectorEnv(
         [
             (lambda: make_env(idx, test))
-            for idx, env in enumerate(range(5))
+            for idx, env in enumerate(range(8))
         ]
     )
 
@@ -69,27 +68,6 @@ model = pfrl.nn.RecurrentSequential(
 )
 
 
-# model = pfrl.nn.RecurrentSequential(
-#         lecun_init(nn.Conv2d(obs_n_channels, 32, 8, stride=4)),
-#         nn.ReLU(),
-#         lecun_init(nn.Conv2d(32, 64, 4, stride=2)),
-#         nn.ReLU(),
-#         lecun_init(nn.Conv2d(64, 64, 3, stride=1)),
-#         nn.ReLU(),
-#         nn.Flatten(),
-#         lecun_init(nn.Linear(3136, 512)),
-#         nn.ReLU(),
-#         lecun_init(nn.GRU(num_layers=1, input_size=512, hidden_size=512)),
-#         pfrl.nn.Branched(
-#             nn.Sequential(
-#                 lecun_init(nn.Linear(512, n_actions), 1e-2),
-#                 SoftmaxCategoricalHead(),
-#             ),
-#             lecun_init(nn.Linear(512, 1)),
-#         ),
-#     )
-
-
 opt = torch.optim.Adam(model.parameters(), lr=3e-4)
 
 
@@ -104,7 +82,7 @@ agent = PPO(
     opt,
     gpu=0,
     # phi=phi,
-    # update_interval=,
+    update_interval=2048,
     minibatch_size=64,
     epochs=10,
     clip_eps=0.1,
@@ -113,6 +91,7 @@ agent = PPO(
     entropy_coef=1e-2,
     recurrent=True,
     max_grad_norm=0.5,
+    # max_recurrent_sequence_len = 50,
 )
 
 if __name__ == '__main__':
