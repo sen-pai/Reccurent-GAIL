@@ -68,41 +68,15 @@ model = nn.Sequential(
 )
 
 
-# model = pfrl.nn.RecurrentSequential(
-#         lecun_init(nn.Conv2d(obs_n_channels, 32, 8, stride=4)),
-#         nn.ReLU(),
-#         lecun_init(nn.Conv2d(32, 64, 4, stride=2)),
-#         nn.ReLU(),
-#         lecun_init(nn.Conv2d(64, 64, 3, stride=1)),
-#         nn.ReLU(),
-#         nn.Flatten(),
-#         lecun_init(nn.Linear(3136, 512)),
-#         nn.ReLU(),
-#         lecun_init(nn.GRU(num_layers=1, input_size=512, hidden_size=512)),
-#         pfrl.nn.Branched(
-#             nn.Sequential(
-#                 lecun_init(nn.Linear(512, n_actions), 1e-2),
-#                 SoftmaxCategoricalHead(),
-#             ),
-#             lecun_init(nn.Linear(512, 1)),
-#         ),
-#     )
-
-
 opt = torch.optim.Adam(model.parameters(), lr=3e-4)
 
 
-# mostly not needed
-def phi(x):
-    # Feature extractor
-    return np.asarray(x, dtype=np.float32)
 
 
 agent = PPO(
     model,
     opt,
     gpu=0,
-    # phi=phi,
     # update_interval=,
     minibatch_size=64,
     epochs=10,
