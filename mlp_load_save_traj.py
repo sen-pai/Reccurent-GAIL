@@ -54,7 +54,7 @@ agent = PPO(
     entropy_coef=1e-2,
     recurrent=False,
     max_grad_norm=0.5,
-    act_deterministically=True
+    act_deterministically=False
 )
 
 agent.load("mlp_run/50000_finish/")
