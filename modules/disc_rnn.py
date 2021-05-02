@@ -13,7 +13,8 @@ class RNNDisc(nn.Module):
 
     def __init__(
         self,
-        dummy_inputs: List,  # provide a list to infer size from, eg: [state0] or [state0, act0]
+        obs_size, 
+        act_size = None,
         flatten: bool = True,
         hidden_size: int = 100,
         dropout: float = 0.0,
@@ -21,7 +22,7 @@ class RNNDisc(nn.Module):
     ):
         super(RNNADisc, self).__init__()
 
-        self.input_size = input_dim
+        self.input_size = obs_size if not act_size else obs_size + act_size
         self.hidden_size = hidden_size
         self.layers = 1
         self.dropout = encoder_dropout

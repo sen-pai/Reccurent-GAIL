@@ -71,19 +71,21 @@ for traj in range(args.num_traj):
         action = agent._batch_act_eval(batch_states([obs], agent.device, agent.phi))
         obs, reward, done, info = env.step(action)
         action_list.append(action)
-        info_list.append({})
+        # info_list.append({})
         obs_list.append(obs)
         if args.render:
             env.render()
         if done:
             break
-    traj_dataset.append(
-        Trajectory(
-            obs=np.array(obs_list),
-            acts=np.array(action_list),
-            infos=np.array(info_list),
-        )
-    )
+    # traj_dataset.append(
+    #     Trajectory(
+    #         obs=np.array(obs_list),
+    #         acts=np.array(action_list),
+    #         # infos=np.array(info_list),
+    #     )
+    # )
+
+    traj_dataset.append([np.array(obs_list), np.array(action_list)])
 
 with open(args.save_name + ".pkl", "wb") as handle:
     pickle.dump(traj_dataset, handle, protocol=pickle.HIGHEST_PROTOCOL)
