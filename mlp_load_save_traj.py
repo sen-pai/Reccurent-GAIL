@@ -4,67 +4,86 @@ import numpy as np
 import pickle
 import gym_minigrid
 from gym_minigrid import wrappers
-import logging
 
 import torch
 import torch.nn as nn
 
 import pfrl
-from pfrl import experiments, utils
 from pfrl.agents import PPO
-from pfrl.policies import SoftmaxCategoricalHead
 from pfrl.utils.batch_states import batch_states
 
-env_name = "MiniGrid-Empty-5x5-v0"
+from imitation.data.types import Trajectory
 
-env = gym.make(env_name)
+
+from modules.pfrl_networks import get_mlp_model
+
+
+import argparse
+
+parser = argparse.ArgumentParser(description="Full Process")
+
+parser.add_argument(
+    "--weights_path",
+    "-w",
+    type=str,
+    default="mlp_run/50000_finish/",
+    help="Path to weights",
+)
+parser.add_argument(
+    "--env_name", "-e", type=str, default="MiniGrid-Empty-5x5-v0",
+)
+parser.add_argument(
+    "--save_name", "-s", default="check_run", help="Save pkl file with this name",
+)
+
+parser.add_argument(
+    "--num_traj", "-nt", type=int, default=50, help="How many traj to save",
+)
+parser.add_argument(
+    "--time_limit", "-tl", type=int, default=200,
+)
+parser.add_argument(
+    "--render", "-r", action="store_true",
+)
+args = parser.parse_args()
+
+env = gym.make(args.env_name)
 env = wrappers.FlatObsWrapper(env)
-
 
 obs_size = env.reset().shape[0]
 n_actions = env.action_space.n
 
-
-
-model = nn.Sequential(
-    nn.Linear(obs_size, 64),
-    nn.ReLU(),
-    pfrl.nn.Branched(
-        # action branch
-        nn.Sequential(nn.Linear(64, n_actions), SoftmaxCategoricalHead(),),
-        # value branch
-        nn.Linear(64, 1),
-    ),
-)
-
-
+model = get_mlp_model(obs_size, n_actions)
 opt = torch.optim.Adam(model.parameters(), lr=3e-4)
 
-
-agent = PPO(
-    model,
-    opt,
-    gpu=0,
-    # update_interval=,
-    minibatch_size=64,
-    epochs=10,
-    clip_eps=0.1,
-    clip_eps_vf=None,
-    standardize_advantages=True,
-    entropy_coef=1e-2,
-    recurrent=False,
-    max_grad_norm=0.5,
-    act_deterministically=False
-)
-
-agent.load("mlp_run/50000_finish/")
+agent = PPO(model, opt, gpu=0, recurrent=False, act_deterministically=False,)
+agent.load(args.weights_path)
 agent.training = False
 
-for traj in range(30):
+traj_dataset = []
+for traj in range(args.num_traj):
+    obs_list = []
+    action_list = []
+    info_list = []
     obs = env.reset()
-    for i in range(500):
+    obs_list.append(obs)
+    for i in range(args.time_limit):
         action = agent._batch_act_eval(batch_states([obs], agent.device, agent.phi))
         obs, reward, done, info = env.step(action)
-        env.render()
+        action_list.append(action)
+        info_list.append({})
+        obs_list.append(obs)
+        if args.render:
+            env.render()
         if done:
             break
+    traj_dataset.append(
+        Trajectory(
+            obs=np.array(obs_list),
+            acts=np.array(action_list),
+            infos=np.array(info_list),
+        )
+    )
+
+with open(args.save_name + ".pkl", "wb") as handle:
+    pickle.dump(traj_dataset, handle, protocol=pickle.HIGHEST_PROTOCOL)
